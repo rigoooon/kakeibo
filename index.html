@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="家計簿">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="description" content="シンプルで美しい家計簿アプリ。収入・支出を記録して、月別の集計をグラフで確認できます。">
+    <title>家計簿</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ===== Dashboard Tab ===== -->
+        <div class="tab-content active" id="tab-dashboard">
+            <header class="page-header">
+                <h1>家計簿</h1>
+                <button class="header-btn" onclick="showAddModal()">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#4F46E5"/><path d="M12 7v10M7 12h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </header>
+            <div class="scroll-area">
+                <div class="balance-card">
+                    <p class="balance-month" id="dashboard-month"></p>
+                    <p class="balance-label">残高</p>
+                    <p class="balance-amount" id="dashboard-balance">¥0</p>
+                </div>
+                <div class="summary-row">
+                    <div class="summary-card income">
+                        <div class="summary-icon">↓</div>
+                        <p class="summary-label">収入</p>
+                        <p class="summary-amount" id="dashboard-income">¥0</p>
+                    </div>
+                    <div class="summary-card expense">
+                        <div class="summary-icon">↑</div>
+                        <p class="summary-label">支出</p>
+                        <p class="summary-amount" id="dashboard-expense">¥0</p>
+                    </div>
+                </div>
+                <div id="recent-section">
+                    <h2 class="section-title">最近の取引</h2>
+                    <div class="card" id="recent-list"></div>
+                </div>
+                <div class="empty-state" id="dashboard-empty" style="display:none;">
+                    <div class="empty-icon">💴</div>
+                    <p class="empty-title">まだ取引がありません</p>
+                    <p class="empty-subtitle">＋ボタンから取引を追加しましょう</p>
+                    <button class="btn-primary" onclick="showAddModal()">取引を追加</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== History Tab ===== -->
+        <div class="tab-content" id="tab-history">
+            <header class="page-header">
+                <h1>取引履歴</h1>
+                <button class="header-btn" onclick="showAddModal()">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#4F46E5"/><path d="M12 7v10M7 12h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </header>
+            <div class="scroll-area">
+                <div class="month-picker">
+                    <button class="month-arrow" onclick="changeHistoryMonth(-1)">‹</button>
+                    <span class="month-label" id="history-month-label"></span>
+                    <button class="month-arrow" onclick="changeHistoryMonth(1)">›</button>
+                </div>
+                <div id="history-list"></div>
+                <div class="empty-state" id="history-empty" style="display:none;">
+                    <div class="empty-icon">📋</div>
+                    <p class="empty-title">この月の取引はありません</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Summary Tab ===== -->
+        <div class="tab-content" id="tab-summary">
+            <header class="page-header">
+                <h1>集計</h1>
+            </header>
+            <div class="scroll-area">
+                <div class="month-picker card">
+                    <button class="month-arrow" onclick="changeSummaryMonth(-1)">‹</button>
+                    <span class="month-label" id="summary-month-label"></span>
+                    <button class="month-arrow" onclick="changeSummaryMonth(1)">›</button>
+                </div>
+                <div class="segment-control" id="summary-type-toggle">
+                    <button class="segment active" data-value="expense" onclick="switchSummaryType('expense')">支出</button>
+                    <button class="segment" data-value="income" onclick="switchSummaryType('income')">収入</button>
+                </div>
+                <div id="summary-content">
+                    <div class="card chart-card">
+                        <canvas id="pie-chart" width="240" height="240"></canvas>
+                        <div class="chart-center">
+                            <p class="chart-center-label">合計</p>
+                            <p class="chart-center-amount" id="chart-total">¥0</p>
+                        </div>
+                    </div>
+                    <div id="category-breakdown"></div>
+                </div>
+                <div class="empty-state" id="summary-empty" style="display:none;">
+                    <div class="empty-icon">📊</div>
+                    <p class="empty-title">データがありません</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Add Transaction Modal ===== -->
+        <div class="modal-overlay" id="add-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <button class="modal-close" onclick="hideAddModal()">キャンセル</button>
+                    <h2>取引を追加</h2>
+                    <button class="modal-save" id="save-btn" onclick="saveTransaction()" disabled>保存</button>
+                </div>
+                <div class="modal-body">
+                    <div class="segment-control">
+                        <button class="segment active" data-value="expense" onclick="switchAddType('expense')">支出</button>
+                        <button class="segment" data-value="income" onclick="switchAddType('income')">収入</button>
+                    </div>
+                    <div class="amount-input-card">
+                        <p class="amount-label">金額</p>
+                        <div class="amount-row">
+                            <span class="amount-yen">¥</span>
+                            <input type="number" id="amount-input" class="amount-field" placeholder="0" inputmode="numeric" oninput="validateForm()">
+                        </div>
+                    </div>
+                    <h3 class="form-section-title">カテゴリ</h3>
+                    <div class="category-grid" id="category-grid"></div>
+                    <h3 class="form-section-title">メモ</h3>
+                    <input type="text" id="note-input" class="text-input" placeholder="メモを入力（任意）">
+                    <h3 class="form-section-title">日付</h3>
+                    <input type="date" id="date-input" class="text-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Tab Bar ===== -->
+        <nav class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>ホーム</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('history')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+                <span>履歴</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('summary')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-6.22-8.56"/><path d="M21 3v6h-6"/></svg>
+                <span>集計</span>
+            </button>
+        </nav>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
