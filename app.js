@@ -746,14 +746,14 @@ function processFixedExpenses() {
 
 // ===== GAS SYNC & CATEGORY ESTIMATION =====
 const CATEGORY_RULES = [
-    { keywords: ['スーパー', 'イオン', 'AEON', 'マルエツ', 'ライフ', 'LIFE', '西友', 'SEIYU', 'コープ', 'COOP', 'まいばすけっと'], category: '食費', icon: '🛒' },
+    { keywords: ['スーパー', 'イオン', 'AEON', 'マルエツ', 'ライフ', 'LIFE', '西友', 'SEIYU', 'コープ', 'COOP', 'まいばすけっと', 'ベイシア', 'BEISIA'], category: '食費', icon: '🛒' },
     { keywords: ['レストラン', 'RESTAURANT', '食', 'FOOD', 'マクドナルド', 'MCDONALD', 'スターバックス', 'STARBUCKS', 'コンビニ', 'SEVEN', 'セブン', 'ローソン', 'LAWSON', 'ファミリーマート', 'FAMILYMART', 'すき家', '吉野家', 'CoCo', 'ココ', 'カフェ', 'CAFE', 'ベーカリー', 'BAKERY', 'スシ', 'SUSHI', 'ラーメン', '居酒屋', 'デニーズ', 'ガスト', 'サイゼリヤ', 'モスバーガー', 'ケンタッキー', 'KFC', 'ピザ', 'PIZZA', 'UBER EATS'], category: '外食', icon: '🍽️' },
     { keywords: ['交通', 'JR', '鉄道', 'RAIL', 'タクシー', 'TAXI', 'UBER', 'バス', 'BUS', 'ETC', '高速', '駐車', 'PARKING', 'ガソリン', 'ENEOS', 'エネオス', '出光', 'SHELL', 'コスモ', 'ANA', 'JAL', '航空'], category: '交通費', icon: '🚗' },
     { keywords: ['通信', 'DOCOMO', 'ドコモ', 'AU', 'KDDI', 'SOFTBANK', 'ソフトバンク', 'APPLE', 'GOOGLE', 'AMAZON PRIME', 'NETFLIX', 'SPOTIFY', 'YOUTUBE', 'DISNEY'], category: '通信費', icon: '📱' },
     { keywords: ['病院', '医院', 'クリニック', 'CLINIC', '薬局', '薬', 'PHARMACY', '歯科', 'DENTAL', '動物病院', 'DOUBUTU', 'ANIMAL'], category: '医療費', icon: '🏥' },
     { keywords: ['衣', 'ユニクロ', 'UNIQLO', 'GU', 'ZARA', 'H&M', 'MUJI', '無印', 'ABC-MART', 'アパレル'], category: '衣服', icon: '👕' },
     { keywords: ['日用', 'ドラッグ', 'DRUG', 'マツモトキヨシ', 'MATSUKIYO', 'ウエルシア', 'WELCIA', 'ツルハ', 'TSURUHA', 'ダイソー', 'DAISO', 'SERIA', 'セリア', '100円', 'ニトリ', 'NITORI', 'ホームセンター', 'CAINZ', 'カインズ'], category: '日用品', icon: '🛒' },
-    { keywords: ['映画', 'CINEMA', 'ゲーム', 'GAME', 'カラオケ', 'KARAOKE', 'アミューズ', 'AMUSE', 'レジャー', 'LEISURE', '遊園', '水族館', '動物園', '旅行', 'TRAVEL', 'ホテル', 'HOTEL', '温泉'], category: '娯楽', icon: '🎮' },
+    { keywords: ['映画', 'CINEMA', 'ゲーム', 'GAME', 'PlayStation Network', 'カラオケ', 'KARAOKE', 'アミューズ', 'AMUSE', 'レジャー', 'LEISURE', '遊園', '水族館', '動物園', '旅行', 'TRAVEL', 'ホテル', 'HOTEL', '温泉'], category: '娯楽', icon: '🎮' },
     { keywords: ['美容', '理容', 'サロン', 'SALON', '美髪', 'HAIR', 'エステ'], category: '美容', icon: '✂️' },
     { keywords: ['教育', '書店', '書籍', 'BOOK', 'AMAZON', '本屋', '紀伊國屋', 'KINOKUNIYA', '学校', 'SCHOOL'], category: '教育費', icon: '📚' },
     { keywords: ['住居', '家賃', '不動産', 'RENT', '管理費'], category: '住居費', icon: '🏠' },
