@@ -113,15 +113,24 @@
                         onclick="switchSummaryType('expense')">支出</button>
                     <button class="segment" data-value="income" onclick="switchSummaryType('income')">収入</button>
                 </div>
+                <div class="segment-control" id="summary-view-toggle" style="margin-top: 8px;">
+                    <button class="segment active" data-value="chart" onclick="switchSummaryView('chart')">グラフ</button>
+                    <button class="segment" data-value="calendar" onclick="switchSummaryView('calendar')">カレンダー</button>
+                </div>
                 <div id="summary-content">
-                    <div class="card chart-card">
-                        <canvas id="pie-chart" width="240" height="240"></canvas>
-                        <div class="chart-center">
-                            <p class="chart-center-label">合計</p>
-                            <p class="chart-center-amount" id="chart-total">¥0</p>
+                    <div id="summary-chart-view">
+                        <div class="card chart-card">
+                            <canvas id="pie-chart" width="240" height="240"></canvas>
+                            <div class="chart-center">
+                                <p class="chart-center-label">合計</p>
+                                <p class="chart-center-amount" id="chart-total">¥0</p>
+                            </div>
                         </div>
+                        <div id="category-breakdown"></div>
                     </div>
-                    <div id="category-breakdown"></div>
+                    <div id="summary-calendar-view" style="display: none;">
+                        <div class="card" id="calendar-container" style="padding: 12px; margin-top: 16px;"></div>
+                    </div>
                 </div>
                 <div class="empty-state" id="summary-empty" style="display:none;">
                     <div class="empty-icon">📊</div>
@@ -135,7 +144,7 @@
             <div class="modal">
                 <div class="modal-header">
                     <button class="modal-close" onclick="hideAddModal()">キャンセル</button>
-                    <h2>取引を追加</h2>
+                    <h2 id="add-modal-title">取引を追加</h2>
                     <button class="modal-save" id="save-btn" onclick="saveTransaction()" disabled>保存</button>
                 </div>
                 <div class="modal-body">
@@ -181,7 +190,14 @@
                         🔄 カード利用を同期
                     </button>
                     <div id="sync-status" class="sync-status"></div>
-                    <div class="settings-hint">
+
+                    <h3 class="form-section-title" style="margin-top: 32px;">📅 固定費設定</h3>
+                    <p class="settings-desc">毎月決まった日に自動で記録される固定費（家賃・サブスクなど）を設定します。</p>
+                    <button class="btn-secondary btn-full" onclick="showFixedExpensesModal()">
+                        固定費の管理
+                    </button>
+
+                    <div class="settings-hint" style="margin-top: 32px;">
                         <details>
                             <summary>セットアップ方法</summary>
                             <ol>
@@ -194,6 +210,84 @@
                             </ol>
                         </details>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Category Detail Modal ===== -->
+        <div class="modal-overlay" id="category-detail-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <button class="modal-close" onclick="hideCategoryDetailModal()">閉じる</button>
+                    <h2 id="category-detail-title">カテゴリ内訳</h2>
+                    <div style="width:60px"></div>
+                </div>
+                <div class="modal-body">
+                    <div class="dashboard-total-card" style="margin-bottom: 16px;">
+                        <p class="dashboard-label">合計金額</p>
+                        <h2 class="dashboard-amount" id="category-detail-total">¥0</h2>
+                    </div>
+                    <div id="category-detail-list">
+                        <!-- Transactions will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Fixed Expenses Modal ===== -->
+        <div class="modal-overlay" id="fixed-expenses-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <button class="modal-close" onclick="hideFixedExpensesModal()">戻る</button>
+                    <h2>固定費の管理</h2>
+                    <button class="modal-save" onclick="showAddFixedExpenseModal()">追加</button>
+                </div>
+                <div class="modal-body">
+                    <div class="empty-state" id="fixed-expenses-empty" style="display:none; padding: 32px 0;">
+                        <p class="empty-title">登録されている固定費はありません</p>
+                    </div>
+                    <div id="fixed-expenses-list">
+                        <!-- Fixed expenses will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Add Fixed Expense Modal ===== -->
+        <div class="modal-overlay" id="add-fixed-expense-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <button class="modal-close" onclick="hideAddFixedExpenseModal()">キャンセル</button>
+                    <h2 id="fixed-expense-modal-title">固定費を追加</h2>
+                    <button class="modal-save" id="save-fixed-btn" onclick="saveFixedExpense()" disabled>保存</button>
+                </div>
+                <div class="modal-body">
+                    <div class="segment-control">
+                        <button class="segment active" data-value="expense"
+                            onclick="switchFixedType('expense')">支出</button>
+                        <button class="segment" data-value="income" onclick="switchFixedType('income')">収入</button>
+                    </div>
+                    <div class="amount-input-card">
+                        <p class="amount-label">金額</p>
+                        <div class="amount-row">
+                            <span class="amount-yen">¥</span>
+                            <input type="number" id="fixed-amount-input" class="amount-field expense" placeholder="0"
+                                inputmode="numeric" oninput="validateFixedForm()">
+                        </div>
+                    </div>
+                    <h3 class="form-section-title">名前（名目）</h3>
+                    <input type="text" id="fixed-name-input" class="text-input" placeholder="例: 家賃、Netflix など"
+                        oninput="validateFixedForm()">
+
+                    <h3 class="form-section-title">発生日 (毎月)</h3>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" id="fixed-day-input" class="text-input" placeholder="25" min="1" max="31"
+                            value="1" style="width: 80px;" oninput="validateFixedForm()">
+                        <span style="font-weight: 600; color: var(--text-secondary);">日</span>
+                    </div>
+
+                    <h3 class="form-section-title">カテゴリ</h3>
+                    <div class="category-grid" id="fixed-category-grid"></div>
                 </div>
             </div>
         </div>

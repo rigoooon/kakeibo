@@ -3,7 +3,8 @@
 // --- Category Data ---
 const CATEGORIES = {
     expense: [
-        { name: '食費', icon: '🍽️' },
+        { name: '食費', icon: '🛒' },
+        { name: '外食', icon: '🍽️' },
         { name: '交通費', icon: '🚗' },
         { name: '住居費', icon: '🏠' },
         { name: '光熱費', icon: '⚡' },
@@ -36,9 +37,16 @@ let transactions = JSON.parse(localStorage.getItem('kakeibo_transactions') || '[
 let historyMonth = new Date();
 let summaryMonth = new Date();
 let summaryType = 'expense';
+let summaryView = 'chart';
 let addType = 'expense';
 let selectedCategory = null;
 let currentSwipedRow = null;
+let editingTxId = null;
+
+let fixedExpenses = JSON.parse(localStorage.getItem('kakeibo_fixed_expenses') || '[]');
+let editingFixedId = null;
+let fixedType = 'expense';
+let selectedFixedCategory = null;
 
 // --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -128,7 +136,7 @@ function txRowHTML(t) {
     const sign = t.type === 'income' ? '+' : '-';
     const d = new Date(t.date);
     return `
-        <div class="tx-row" data-id="${t.id}">
+        <div class="tx-row" data-id="${t.id}" onclick="showEditModal('${t.id}')">
             <div class="tx-icon ${t.type}">${t.categoryIcon}</div>
             <div class="tx-info">
                 <div class="tx-category">${t.categoryName}</div>
@@ -176,7 +184,7 @@ function renderHistory() {
     for (const [dateStr, txs] of Object.entries(groups)) {
         html += `<p class="date-section-title">${dateStr}</p><div class="card">`;
         html += txs.map(t => `
-            <div class="tx-row" data-id="${t.id}" ontouchstart="onSwipeStart(event)" ontouchmove="onSwipeMove(event)" ontouchend="onSwipeEnd(event)">
+            <div class="tx-row" data-id="${t.id}" onclick="showEditModal('${t.id}')" ontouchstart="onSwipeStart(event)" ontouchmove="onSwipeMove(event)" ontouchend="onSwipeEnd(event)">
                 <div class="tx-icon ${t.type}">${t.categoryIcon}</div>
                 <div class="tx-info">
                     <div class="tx-category">${t.categoryName}</div>
@@ -186,7 +194,7 @@ function renderHistory() {
                     <div class="tx-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}</div>
                     <div class="tx-date">${formatShortDate(new Date(t.date))}</div>
                 </div>
-                <div class="tx-delete" onclick="deleteTx('${t.id}')">削除</div>
+                <div class="tx-delete" onclick="event.stopPropagation(); deleteTx('${t.id}')">削除</div>
             </div>`).join('');
         html += '</div>';
     }
@@ -236,6 +244,22 @@ function switchSummaryType(type) {
     renderSummary();
 }
 
+function switchSummaryView(view) {
+    summaryView = view;
+    document.querySelectorAll('#summary-view-toggle .segment').forEach(el => {
+        el.classList.toggle('active', el.dataset.value === view);
+    });
+
+    if (view === 'chart') {
+        document.getElementById('summary-chart-view').style.display = 'block';
+        document.getElementById('summary-calendar-view').style.display = 'none';
+    } else {
+        document.getElementById('summary-chart-view').style.display = 'none';
+        document.getElementById('summary-calendar-view').style.display = 'block';
+    }
+    renderSummary();
+}
+
 function renderSummary() {
     document.getElementById('summary-month-label').textContent = formatMonthYear(summaryMonth);
     const monthTx = transactions.filter(t =>
@@ -250,6 +274,11 @@ function renderSummary() {
     }
     document.getElementById('summary-content').style.display = '';
     document.getElementById('summary-empty').style.display = 'none';
+
+    if (summaryView === 'calendar') {
+        renderCalendar(monthTx);
+        return;
+    }
 
     // Group by category
     const catMap = {};
@@ -269,7 +298,7 @@ function renderSummary() {
     let html = '<p class="breakdown-title">カテゴリ別内訳</p><div class="card">';
     catList.forEach((c, i) => {
         html += `
-            <div class="breakdown-row">
+            <div class="breakdown-row" onclick="showCategoryDetail('${c.name}')" style="cursor: pointer;">
                 <div class="breakdown-dot" style="background:${CHART_COLORS[i % CHART_COLORS.length]}"></div>
                 <div class="breakdown-icon">${c.icon}</div>
                 <div class="breakdown-name">${c.name}</div>
@@ -310,13 +339,118 @@ function drawDonutChart(data) {
     });
 }
 
-// ===== ADD TRANSACTION =====
+function renderCalendar(monthTx) {
+    const year = summaryMonth.getFullYear();
+    const month = summaryMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0(Sun) - 6(Sat)
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const dayMap = {};
+    monthTx.forEach(t => {
+        const d = new Date(t.date).getDate();
+        dayMap[d] = (dayMap[d] || 0) + t.amount;
+    });
+
+    let html = `
+        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 12px; margin-bottom: 8px; font-weight: 600; color: var(--text-secondary);">
+            <div style="color: #ef4444;">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div style="color: #3b82f6;">土</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;">
+    `;
+
+    for (let i = 0; i < firstDayIndex; i++) {
+        html += `<div style="padding: 8px; background: transparent;"></div>`;
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = isSameDay(new Date(year, month, day), new Date());
+        const hasTx = dayMap[day] > 0;
+        const colorStr = summaryType === 'expense' ? '#E11D48' : '#059669';
+
+        html += `
+            <div onclick="showDayDetail(${year}, ${month}, ${day})" style="padding: 8px 2px; border-radius: 8px; background: var(--bg-secondary); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 54px; cursor: pointer; border: ${isToday ? '2px solid var(--primary-color)' : '1px solid transparent'}; box-sizing: border-box;">
+                <span style="font-size: 14px; font-weight: ${isToday ? '700' : '500'}; color: var(--text-primary);">${day}</span>
+                ${hasTx ? `<span style="color: ${colorStr}; font-size: 10px; margin-top: 4px; font-weight: 600; word-break: break-all;">${dayMap[day] >= 1000 ? Math.round(dayMap[day] / 1000) + 'k' : dayMap[day]}</span>` : ''}
+            </div>
+        `;
+    }
+
+    html += `</div>`;
+    document.getElementById('calendar-container').innerHTML = html;
+}
+
+// ===== CATEGORY / DAY DETAIL =====
+function showDayDetail(year, month, day) {
+    const targetDate = new Date(year, month, day);
+    const dayTx = transactions.filter(t =>
+        isSameDay(new Date(t.date), targetDate) && t.type === summaryType
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (dayTx.length === 0) return;
+
+    const total = dayTx.reduce((s, t) => s + t.amount, 0);
+    const title = `${month + 1}月${day}日 (${summaryType === 'expense' ? '支出' : '収入'})`;
+
+    document.getElementById('category-detail-title').textContent = title;
+    document.getElementById('category-detail-total').textContent = formatCurrency(total);
+    document.getElementById('category-detail-list').innerHTML = dayTx.map(t => txRowHTML(t)).join('');
+
+    document.getElementById('category-detail-modal').classList.add('show');
+}
+function showCategoryDetail(categoryName) {
+    const monthTx = transactions.filter(t =>
+        isSameMonth(new Date(t.date), summaryMonth) &&
+        t.type === summaryType &&
+        t.categoryName === categoryName
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const total = monthTx.reduce((s, t) => s + t.amount, 0);
+
+    document.getElementById('category-detail-title').textContent = `${categoryName} (${formatMonthYear(summaryMonth)})`;
+    document.getElementById('category-detail-total').textContent = formatCurrency(total);
+    document.getElementById('category-detail-list').innerHTML = monthTx.map(t => txRowHTML(t)).join('');
+
+    document.getElementById('category-detail-modal').classList.add('show');
+}
+
+function hideCategoryDetailModal() {
+    document.getElementById('category-detail-modal').classList.remove('show');
+}
+
+// ===== ADD / EDIT TRANSACTION =====
 function showAddModal() {
+    editingTxId = null;
+    document.getElementById('add-modal-title').textContent = '取引を追加';
     resetAddForm();
     document.getElementById('add-modal').classList.add('show');
 }
 function hideAddModal() {
     document.getElementById('add-modal').classList.remove('show');
+    editingTxId = null;
+}
+
+function showEditModal(id) {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+    editingTxId = id;
+
+    // Set type
+    switchAddType(tx.type);
+
+    // Set values
+    document.getElementById('amount-input').value = tx.amount;
+    document.getElementById('amount-input').className = 'amount-field ' + tx.type;
+    document.getElementById('note-input').value = tx.note || '';
+    document.getElementById('date-input').value = tx.date;
+
+    // Find and select category
+    const catIndex = CATEGORIES[tx.type].findIndex(c => c.name === tx.categoryName);
+    if (catIndex !== -1) {
+        selectCategory(catIndex);
+    }
+
+    document.getElementById('add-modal-title').textContent = '記録の編集';
+    document.getElementById('add-modal').classList.add('show');
 }
 
 function switchAddType(type) {
@@ -373,23 +507,40 @@ function saveTransaction() {
     const amount = parseFloat(document.getElementById('amount-input').value);
     if (!amount || amount <= 0 || !selectedCategory) return;
 
-    const tx = {
-        id: crypto.randomUUID(),
-        amount,
-        type: addType,
-        categoryName: selectedCategory.name,
-        categoryIcon: selectedCategory.icon,
-        note: document.getElementById('note-input').value.trim(),
-        date: document.getElementById('date-input').value || formatDateInput(new Date()),
-    };
+    if (editingTxId) {
+        // Edit existing
+        const txIndex = transactions.findIndex(t => t.id === editingTxId);
+        if (txIndex !== -1) {
+            transactions[txIndex] = {
+                ...transactions[txIndex],
+                amount,
+                type: addType,
+                categoryName: selectedCategory.name,
+                categoryIcon: selectedCategory.icon,
+                note: document.getElementById('note-input').value.trim(),
+                date: document.getElementById('date-input').value || formatDateInput(new Date()),
+            };
+        }
+    } else {
+        // Add new
+        const tx = {
+            id: crypto.randomUUID(),
+            amount,
+            type: addType,
+            categoryName: selectedCategory.name,
+            categoryIcon: selectedCategory.icon,
+            note: document.getElementById('note-input').value.trim(),
+            date: document.getElementById('date-input').value || formatDateInput(new Date()),
+        };
+        transactions.push(tx);
+    }
 
-    transactions.push(tx);
     save();
     hideAddModal();
     renderAll();
 }
 
-// ===== SETTINGS =====
+// ===== SETTINGS & FIXED EXPENSES =====
 function showSettingsModal() {
     const savedUrl = localStorage.getItem('kakeibo_gas_url') || '';
     document.getElementById('gas-url-input').value = savedUrl;
@@ -404,9 +555,199 @@ function hideSettingsModal() {
     document.getElementById('settings-modal').classList.remove('show');
 }
 
+// --- FIXED EXPENSES ---
+function saveFixed() {
+    localStorage.setItem('kakeibo_fixed_expenses', JSON.stringify(fixedExpenses));
+}
+
+function showFixedExpensesModal() {
+    renderFixedExpensesList();
+    document.getElementById('fixed-expenses-modal').classList.add('show');
+}
+function hideFixedExpensesModal() {
+    document.getElementById('fixed-expenses-modal').classList.remove('show');
+}
+
+function renderFixedExpensesList() {
+    const listEl = document.getElementById('fixed-expenses-list');
+    const emptyEl = document.getElementById('fixed-expenses-empty');
+    if (fixedExpenses.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+    }
+    emptyEl.style.display = 'none';
+
+    listEl.innerHTML = fixedExpenses.map(f => `
+        <div class="tx-row" onclick="showEditFixedExpenseModal('${f.id}')" style="cursor: pointer; margin-bottom: 8px;">
+            <div class="tx-icon ${f.type}">${f.categoryIcon}</div>
+            <div class="tx-info">
+                <div class="tx-category">${f.categoryName}</div>
+                <div class="tx-note">${escapeHTML(f.name)} (毎月${f.dayOfMonth}日)</div>
+            </div>
+            <div class="tx-right" style="display: flex; align-items: center;">
+                <div class="tx-amount ${f.type}" style="margin-right: 8px; font-size: 14px;">${f.type === 'income' ? '+' : '-'}${formatCurrency(f.amount)}</div>
+                <button onclick="event.stopPropagation(); deleteFixedExpense('${f.id}')" style="background:#EF4444; color:white; border:none; padding:6px; border-radius:6px; font-size: 12px; cursor: pointer; height: auto;">削除</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showAddFixedExpenseModal() {
+    editingFixedId = null;
+    document.getElementById('fixed-expense-modal-title').textContent = '固定費を追加';
+    resetFixedForm();
+    document.getElementById('add-fixed-expense-modal').classList.add('show');
+}
+
+function hideAddFixedExpenseModal() {
+    document.getElementById('add-fixed-expense-modal').classList.remove('show');
+    editingFixedId = null;
+}
+
+function showEditFixedExpenseModal(id) {
+    const f = fixedExpenses.find(x => x.id === id);
+    if (!f) return;
+    editingFixedId = id;
+
+    switchFixedType(f.type);
+    document.getElementById('fixed-amount-input').value = f.amount;
+    document.getElementById('fixed-name-input').value = f.name;
+    document.getElementById('fixed-day-input').value = f.dayOfMonth;
+
+    const catIndex = CATEGORIES[f.type].findIndex(c => c.name === f.categoryName);
+    if (catIndex !== -1) selectFixedCategory(catIndex);
+
+    document.getElementById('fixed-expense-modal-title').textContent = '固定費の編集';
+    document.getElementById('add-fixed-expense-modal').classList.add('show');
+}
+
+function switchFixedType(type) {
+    fixedType = type;
+    selectedFixedCategory = null;
+    document.querySelectorAll('#add-fixed-expense-modal .modal-body .segment').forEach(el => {
+        el.classList.toggle('active', el.dataset.value === type);
+    });
+    document.getElementById('fixed-amount-input').className = 'amount-field ' + type;
+    renderFixedCategoryGrid();
+    validateFixedForm();
+}
+
+function renderFixedCategoryGrid() {
+    const grid = document.getElementById('fixed-category-grid');
+    grid.innerHTML = CATEGORIES[fixedType].map((cat, i) => `
+        <button class="cat-btn ${fixedType}" data-index="${i}" onclick="selectFixedCategory(${i})">
+            <div class="cat-icon">${cat.icon}</div>
+            <span class="cat-name">${cat.name}</span>
+        </button>
+    `).join('');
+}
+
+function selectFixedCategory(index) {
+    selectedFixedCategory = CATEGORIES[fixedType][index];
+    document.querySelectorAll('#fixed-category-grid .cat-btn').forEach((el, i) => {
+        el.classList.toggle('selected', i === index);
+    });
+    validateFixedForm();
+}
+
+function validateFixedForm() {
+    const amount = parseFloat(document.getElementById('fixed-amount-input').value);
+    const name = document.getElementById('fixed-name-input').value.trim();
+    const dayObj = parseInt(document.getElementById('fixed-day-input').value, 10);
+    const valid = amount > 0 && name && dayObj >= 1 && dayObj <= 31 && selectedFixedCategory !== null;
+    document.getElementById('save-fixed-btn').disabled = !valid;
+}
+
+function resetFixedForm() {
+    switchFixedType('expense');
+    document.getElementById('fixed-amount-input').value = '';
+    document.getElementById('fixed-name-input').value = '';
+    document.getElementById('fixed-day-input').value = '1';
+    renderFixedCategoryGrid();
+    validateFixedForm();
+}
+
+function saveFixedExpense() {
+    const amount = parseFloat(document.getElementById('fixed-amount-input').value);
+    const name = document.getElementById('fixed-name-input').value.trim();
+    const dayOfMonth = parseInt(document.getElementById('fixed-day-input').value, 10);
+    if (!amount || amount <= 0 || !name || !selectedFixedCategory || isNaN(dayOfMonth)) return;
+
+    if (editingFixedId) {
+        const idx = fixedExpenses.findIndex(f => f.id === editingFixedId);
+        if (idx !== -1) {
+            fixedExpenses[idx] = {
+                ...fixedExpenses[idx],
+                amount,
+                name,
+                dayOfMonth,
+                type: fixedType,
+                categoryName: selectedFixedCategory.name,
+                categoryIcon: selectedFixedCategory.icon
+            };
+        }
+    } else {
+        fixedExpenses.push({
+            id: crypto.randomUUID(),
+            amount,
+            name,
+            dayOfMonth,
+            type: fixedType,
+            categoryName: selectedFixedCategory.name,
+            categoryIcon: selectedFixedCategory.icon
+        });
+    }
+
+    saveFixed();
+    hideAddFixedExpenseModal();
+    renderFixedExpensesList();
+    processFixedExpenses(); // Apply immediately if applicable
+}
+
+function deleteFixedExpense(id) {
+    fixedExpenses = fixedExpenses.filter(f => f.id !== id);
+    saveFixed();
+    renderFixedExpensesList();
+}
+
+function processFixedExpenses() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentDay = now.getDate();
+    let added = false;
+
+    fixedExpenses.forEach(f => {
+        if (currentDay >= f.dayOfMonth) {
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(f.dayOfMonth).padStart(2, '0')}`;
+            const generatedId = `fixed_${f.id}_${currentYear}-${currentMonth + 1}`;
+
+            if (!transactions.some(t => t.id === generatedId)) {
+                transactions.push({
+                    id: generatedId,
+                    amount: f.amount,
+                    type: f.type,
+                    categoryName: f.categoryName,
+                    categoryIcon: f.categoryIcon,
+                    note: f.name,
+                    date: dateStr
+                });
+                added = true;
+            }
+        }
+    });
+
+    if (added) {
+        save();
+        renderAll();
+    }
+}
+
 // ===== GAS SYNC & CATEGORY ESTIMATION =====
 const CATEGORY_RULES = [
-    { keywords: ['レストラン', 'RESTAURANT', '食', 'FOOD', 'マクドナルド', 'MCDONALD', 'スターバックス', 'STARBUCKS', 'コンビニ', 'SEVEN', 'セブン', 'ローソン', 'LAWSON', 'ファミリーマート', 'FAMILYMART', 'すき家', '吉野家', 'CoCo', 'ココ', 'カフェ', 'CAFE', 'ベーカリー', 'BAKERY', 'スシ', 'SUSHI', 'ラーメン', '居酒屋', 'デニーズ', 'ガスト', 'サイゼリヤ', 'モスバーガー', 'ケンタッキー', 'KFC', 'ピザ', 'PIZZA', 'UBER EATS', 'スーパー', 'イオン', 'AEON', 'マルエツ', 'ライフ', 'LIFE', '西友', 'SEIYU', 'コープ', 'COOP', 'まいばすけっと'], category: '食費', icon: '🍽️' },
+    { keywords: ['スーパー', 'イオン', 'AEON', 'マルエツ', 'ライフ', 'LIFE', '西友', 'SEIYU', 'コープ', 'COOP', 'まいばすけっと'], category: '食費', icon: '🛒' },
+    { keywords: ['レストラン', 'RESTAURANT', '食', 'FOOD', 'マクドナルド', 'MCDONALD', 'スターバックス', 'STARBUCKS', 'コンビニ', 'SEVEN', 'セブン', 'ローソン', 'LAWSON', 'ファミリーマート', 'FAMILYMART', 'すき家', '吉野家', 'CoCo', 'ココ', 'カフェ', 'CAFE', 'ベーカリー', 'BAKERY', 'スシ', 'SUSHI', 'ラーメン', '居酒屋', 'デニーズ', 'ガスト', 'サイゼリヤ', 'モスバーガー', 'ケンタッキー', 'KFC', 'ピザ', 'PIZZA', 'UBER EATS'], category: '外食', icon: '🍽️' },
     { keywords: ['交通', 'JR', '鉄道', 'RAIL', 'タクシー', 'TAXI', 'UBER', 'バス', 'BUS', 'ETC', '高速', '駐車', 'PARKING', 'ガソリン', 'ENEOS', 'エネオス', '出光', 'SHELL', 'コスモ', 'ANA', 'JAL', '航空'], category: '交通費', icon: '🚗' },
     { keywords: ['通信', 'DOCOMO', 'ドコモ', 'AU', 'KDDI', 'SOFTBANK', 'ソフトバンク', 'APPLE', 'GOOGLE', 'AMAZON PRIME', 'NETFLIX', 'SPOTIFY', 'YOUTUBE', 'DISNEY'], category: '通信費', icon: '📱' },
     { keywords: ['病院', '医院', 'クリニック', 'CLINIC', '薬局', '薬', 'PHARMACY', '歯科', 'DENTAL', '動物病院', 'DOUBUTU', 'ANIMAL'], category: '医療費', icon: '🏥' },
@@ -456,7 +797,7 @@ async function syncFromGAS() {
         const response = await fetch(gasUrl, {
             redirect: 'follow',
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status} `);
 
         const data = await response.json();
 
@@ -468,11 +809,11 @@ async function syncFromGAS() {
         let imported = 0;
         const existingIds = new Set(transactions.map(t => t.id));
         // Also check by date+amount+note for manual duplicates
-        const existingKeys = new Set(transactions.map(t => `${t.date}_${t.amount}_${t.note}`));
+        const existingKeys = new Set(transactions.map(t => `${t.date}_${t.amount}_${t.note} `));
 
         for (const tx of data.transactions) {
             if (existingIds.has(tx.id)) continue;
-            const key = `${tx.date}_${tx.amount}_${tx.note}`;
+            const key = `${tx.date}_${tx.amount}_${tx.note} `;
             if (existingKeys.has(key)) continue;
 
             // カテゴリを PWA 側で推定する
@@ -490,7 +831,7 @@ async function syncFromGAS() {
         renderAll();
 
         if (imported > 0) {
-            statusEl.textContent = `✅ ${imported}件の取引を取り込みました！`;
+            statusEl.textContent = `✅ ${imported} 件の取引を取り込みました！`;
             statusEl.className = 'sync-status success';
         } else {
             statusEl.textContent = '✅ 新しい取引はありませんでした';
@@ -498,7 +839,7 @@ async function syncFromGAS() {
         }
     } catch (err) {
         console.error('Sync error:', err);
-        statusEl.textContent = `❌ エラー: ${err.message}`;
+        statusEl.textContent = `❌ エラー: ${err.message} `;
         statusEl.className = 'sync-status error';
     } finally {
         btn.disabled = false;
