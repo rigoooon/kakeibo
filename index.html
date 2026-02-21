@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -16,15 +17,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div id="app">
         <!-- ===== Dashboard Tab ===== -->
         <div class="tab-content active" id="tab-dashboard">
             <header class="page-header">
                 <h1>家計簿</h1>
-                <button class="header-btn" onclick="showAddModal()">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#4F46E5"/><path d="M12 7v10M7 12h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
-                </button>
+                <div class="header-actions">
+                    <button class="header-btn" onclick="showSettingsModal()" title="設定">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg>
+                    </button>
+                    <button class="header-btn" onclick="showAddModal()">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#4F46E5" />
+                            <path d="M12 7v10M7 12h10" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                </div>
             </header>
             <div class="scroll-area">
                 <div class="balance-card">
@@ -62,7 +77,10 @@
             <header class="page-header">
                 <h1>取引履歴</h1>
                 <button class="header-btn" onclick="showAddModal()">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#4F46E5"/><path d="M12 7v10M7 12h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="11" fill="#4F46E5" />
+                        <path d="M12 7v10M7 12h10" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+                    </svg>
                 </button>
             </header>
             <div class="scroll-area">
@@ -91,7 +109,8 @@
                     <button class="month-arrow" onclick="changeSummaryMonth(1)">›</button>
                 </div>
                 <div class="segment-control" id="summary-type-toggle">
-                    <button class="segment active" data-value="expense" onclick="switchSummaryType('expense')">支出</button>
+                    <button class="segment active" data-value="expense"
+                        onclick="switchSummaryType('expense')">支出</button>
                     <button class="segment" data-value="income" onclick="switchSummaryType('income')">収入</button>
                 </div>
                 <div id="summary-content">
@@ -121,14 +140,16 @@
                 </div>
                 <div class="modal-body">
                     <div class="segment-control">
-                        <button class="segment active" data-value="expense" onclick="switchAddType('expense')">支出</button>
+                        <button class="segment active" data-value="expense"
+                            onclick="switchAddType('expense')">支出</button>
                         <button class="segment" data-value="income" onclick="switchAddType('income')">収入</button>
                     </div>
                     <div class="amount-input-card">
                         <p class="amount-label">金額</p>
                         <div class="amount-row">
                             <span class="amount-yen">¥</span>
-                            <input type="number" id="amount-input" class="amount-field" placeholder="0" inputmode="numeric" oninput="validateForm()">
+                            <input type="number" id="amount-input" class="amount-field" placeholder="0"
+                                inputmode="numeric" oninput="validateForm()">
                         </div>
                     </div>
                     <h3 class="form-section-title">カテゴリ</h3>
@@ -141,22 +162,72 @@
             </div>
         </div>
 
+        <!-- ===== Settings Modal ===== -->
+        <div class="modal-overlay" id="settings-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <button class="modal-close" onclick="hideSettingsModal()">閉じる</button>
+                    <h2>設定</h2>
+                    <div style="width:60px"></div>
+                </div>
+                <div class="modal-body">
+                    <h3 class="form-section-title">💳 カード自動取り込み</h3>
+                    <p class="settings-desc">三井住友カードの利用通知メールから自動で取引を取り込みます。</p>
+                    <label class="settings-label">GAS Web App URL</label>
+                    <input type="url" id="gas-url-input" class="text-input"
+                        placeholder="https://script.google.com/macros/s/...">
+                    <button class="btn-primary btn-full" id="sync-btn" onclick="syncFromGAS()" style="margin-top:16px;">
+                        🔄 カード利用を同期
+                    </button>
+                    <div id="sync-status" class="sync-status"></div>
+                    <div class="settings-hint">
+                        <details>
+                            <summary>セットアップ方法</summary>
+                            <ol>
+                                <li><a href="https://script.google.com" target="_blank">Google Apps Script</a>
+                                    で新規プロジェクト作成</li>
+                                <li>Code.gs にスクリプトを貼り付け</li>
+                                <li>「デプロイ」→「新しいデプロイ」→「ウェブアプリ」</li>
+                                <li>アクセス: 自分のみ → デプロイ</li>
+                                <li>表示された URL を上に貼り付け</li>
+                            </ol>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== Tab Bar ===== -->
         <nav class="tab-bar">
             <button class="tab-btn active" onclick="switchTab('dashboard')">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
                 <span>ホーム</span>
             </button>
             <button class="tab-btn" onclick="switchTab('history')">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                    <line x1="9" y1="4" x2="9" y2="20" />
+                </svg>
                 <span>履歴</span>
             </button>
             <button class="tab-btn" onclick="switchTab('summary')">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-6.22-8.56"/><path d="M21 3v6h-6"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 11-6.22-8.56" />
+                    <path d="M21 3v6h-6" />
+                </svg>
                 <span>集計</span>
             </button>
         </nav>
     </div>
     <script src="app.js"></script>
 </body>
+
 </html>

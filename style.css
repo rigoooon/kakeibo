@@ -697,6 +697,80 @@ button {
     text-align: right;
 }
 
+/* ===== Header Actions ===== */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ===== Settings ===== */
+.settings-desc {
+    font-size: 13px;
+    color: #8E8E93;
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.settings-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8E8E93;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.btn-full {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sync-status {
+    margin-top: 12px;
+    font-size: 13px;
+    text-align: center;
+    min-height: 20px;
+}
+
+.sync-status.success {
+    color: #059669;
+}
+
+.sync-status.error {
+    color: #E11D48;
+}
+
+.sync-status.loading {
+    color: #4F46E5;
+}
+
+.settings-hint {
+    margin-top: 24px;
+}
+
+.settings-hint details {
+    font-size: 13px;
+    color: #8E8E93;
+}
+
+.settings-hint summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.settings-hint ol {
+    padding-left: 20px;
+    line-height: 2;
+}
+
+.settings-hint a {
+    color: #4F46E5;
+}
+
 /* ===== Animations ===== */
 @keyframes fadeIn {
     from {
@@ -712,6 +786,17 @@ button {
 
 .animate-in {
     animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.sync-spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
 }
 
 /* ===== Dark Mode ===== */

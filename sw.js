@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakeibo-v2';
+const CACHE_NAME = 'kakeibo-v3';
 const ASSETS = [
     './',
     './index.html',

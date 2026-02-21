@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAll();
     registerSwipeHandlers();
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+        navigator.serviceWorker.register('sw.js').catch(() => { });
     }
 });
 
@@ -207,7 +207,7 @@ function onSwipeMove(e) {
         row.classList.remove('swiped');
     }
 }
-function onSwipeEnd() {}
+function onSwipeEnd() { }
 function registerSwipeHandlers() {
     document.addEventListener('click', (e) => {
         if (currentSwipedRow && !e.target.closest('.tx-delete')) {
@@ -387,4 +387,88 @@ function saveTransaction() {
     save();
     hideAddModal();
     renderAll();
+}
+
+// ===== SETTINGS =====
+function showSettingsModal() {
+    const savedUrl = localStorage.getItem('kakeibo_gas_url') || '';
+    document.getElementById('gas-url-input').value = savedUrl;
+    document.getElementById('sync-status').textContent = '';
+    document.getElementById('sync-status').className = 'sync-status';
+    document.getElementById('settings-modal').classList.add('show');
+}
+function hideSettingsModal() {
+    // Save URL when closing
+    const url = document.getElementById('gas-url-input').value.trim();
+    localStorage.setItem('kakeibo_gas_url', url);
+    document.getElementById('settings-modal').classList.remove('show');
+}
+
+// ===== GAS SYNC =====
+async function syncFromGAS() {
+    const urlInput = document.getElementById('gas-url-input');
+    const gasUrl = urlInput.value.trim();
+    const statusEl = document.getElementById('sync-status');
+    const btn = document.getElementById('sync-btn');
+
+    if (!gasUrl) {
+        statusEl.textContent = '⚠️ GAS Web App URL を入力してください';
+        statusEl.className = 'sync-status error';
+        return;
+    }
+
+    // Save URL
+    localStorage.setItem('kakeibo_gas_url', gasUrl);
+
+    // Show loading
+    btn.disabled = true;
+    statusEl.innerHTML = '<span class="sync-spinner">🔄</span> 同期中...';
+    statusEl.className = 'sync-status loading';
+
+    try {
+        const response = await fetch(gasUrl, {
+            redirect: 'follow',
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || '同期に失敗しました');
+        }
+
+        // Import transactions (deduplicate)
+        let imported = 0;
+        const existingIds = new Set(transactions.map(t => t.id));
+        // Also check by date+amount+note for manual duplicates
+        const existingKeys = new Set(transactions.map(t => `${t.date}_${t.amount}_${t.note}`));
+
+        for (const tx of data.transactions) {
+            if (existingIds.has(tx.id)) continue;
+            const key = `${tx.date}_${tx.amount}_${tx.note}`;
+            if (existingKeys.has(key)) continue;
+
+            transactions.push(tx);
+            existingIds.add(tx.id);
+            existingKeys.add(key);
+            imported++;
+        }
+
+        save();
+        renderAll();
+
+        if (imported > 0) {
+            statusEl.textContent = `✅ ${imported}件の取引を取り込みました！`;
+            statusEl.className = 'sync-status success';
+        } else {
+            statusEl.textContent = '✅ 新しい取引はありませんでした';
+            statusEl.className = 'sync-status success';
+        }
+    } catch (err) {
+        console.error('Sync error:', err);
+        statusEl.textContent = `❌ エラー: ${err.message}`;
+        statusEl.className = 'sync-status error';
+    } finally {
+        btn.disabled = false;
+    }
 }
