@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakeibo-v3';
+const CACHE_NAME = 'kakeibo-v4';
 const ASSETS = [
     './',
     './index.html',
@@ -41,6 +41,11 @@ self.addEventListener('fetch', (event) => {
                 });
             })
         );
+        return;
+    }
+
+    // Skip GAS API calls to prevent opaque redirect/CORS issues in Service Worker
+    if (event.request.url.includes('script.google.com') || event.request.url.includes('script.googleusercontent.com')) {
         return;
     }
 
